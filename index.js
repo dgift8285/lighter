@@ -1,4 +1,10 @@
-const { default: makeWASocket, useMultiFileAuthState, DisconnectReason } = require('@whiskeysockets/baileys');
+const {
+  default: makeWASocket,
+  useMultiFileAuthState,
+  DisconnectReason,
+  fetchLatestWaWebVersion,
+  Browsers
+} = require('@whiskeysockets/baileys');
 const P = require('pino');
 const express = require('express');
 
@@ -14,12 +20,12 @@ app.get('/', (req, res) => {
     return res.send('<h2>✅ Bot is connected!</h2>');
   }
   if (pairingCode) {
-    return res.send(`<h2>Your pairing code: ${pairingCode}</h2><p>Enter this in WhatsApp → Linked Devices → Link with phone number</p>`);
+    return res.send(`<h2>Your pairing code: ${pairingCode}</h2><p>Enter this in WhatsApp → Linked Devices → Link with phone number, right now, fast.</p>`);
   }
   res.send(`
-    <h2>Enter your WhatsApp number (with country code, no + or spaces)</h2>
+    <h2>Enter your WhatsApp number (with country code, no + no spaces no leading 0)</h2>
     <form method="POST" action="/pair">
-      <input name="number" placeholder="e.g. 254712345678" />
+      <input name="number" placeholder="e.g. 254748548334" />
       <button type="submit">Get Pairing Code</button>
     </form>
   `);
@@ -42,13 +48,14 @@ app.listen(process.env.PORT || 3000, () => console.log('🌐 Web server running'
 
 async function startBot() {
   const { state, saveCreds } = await useMultiFileAuthState('auth_info');
-const { Browsers } = require('@whiskeysockets/baileys');
+  const { version } = await fetchLatestWaWebVersion();
 
   sock = makeWASocket({
     auth: state,
     logger: P({ level: 'silent' }),
     printQRInTerminal: false,
-    browser: Browsers.ubuntu('Chrome')
+    browser: Browsers.ubuntu('Chrome'),
+    version
   });
 
   sock.ev.on('creds.update', saveCreds);
