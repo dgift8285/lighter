@@ -42,11 +42,13 @@ app.listen(process.env.PORT || 3000, () => console.log('🌐 Web server running'
 
 async function startBot() {
   const { state, saveCreds } = await useMultiFileAuthState('auth_info');
+const { Browsers } = require('@whiskeysockets/baileys');
 
   sock = makeWASocket({
     auth: state,
     logger: P({ level: 'silent' }),
-    printQRInTerminal: false
+    printQRInTerminal: false,
+    browser: Browsers.ubuntu('Chrome')
   });
 
   sock.ev.on('creds.update', saveCreds);
