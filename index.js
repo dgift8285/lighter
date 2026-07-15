@@ -1,21 +1,41 @@
 const { default: makeWASocket, useMultiFileAuthState, DisconnectReason } = require('@whiskeysockets/baileys');
 const P = require('pino');
 const express = require('express');
-const qrcode = require('qrcode');
 
 const app = express();
-let currentQR = null;
+app.use(express.urlencoded({ extended: true }));
+
+let sock = null;
+let pairingCode = null;
 let botStatus = 'starting...';
 
-app.get('/', async (req, res) => {
+app.get('/', (req, res) => {
   if (botStatus === 'connected') {
     return res.send('<h2>✅ Bot is connected!</h2>');
   }
-  if (!currentQR) {
-    return res.send('<h2>Waiting for QR code... refresh in a few seconds</h2>');
+  if (pairingCode) {
+    return res.send(`<h2>Your pairing code: ${pairingCode}</h2><p>Enter this in WhatsApp → Linked Devices → Link with phone number</p>`);
   }
-  const qrImage = await qrcode.toDataURL(currentQR);
-  res.send(`<h2>Scan this with WhatsApp</h2><img src="${qrImage}" />`);
+  res.send(`
+    <h2>Enter your WhatsApp number (with country code, no + or spaces)</h2>
+    <form method="POST" action="/pair">
+      <input name="number" placeholder="e.g. 254712345678" />
+      <button type="submit">Get Pairing Code</button>
+    </form>
+  `);
+});
+
+app.post('/pair', async (req, res) => {
+  const number = req.body.number;
+  if (sock && number) {
+    try {
+      const code = await sock.requestPairingCode(number);
+      pairingCode = code;
+    } catch (e) {
+      return res.send('Error generating code, try again: ' + e.message);
+    }
+  }
+  res.redirect('/');
 });
 
 app.listen(process.env.PORT || 3000, () => console.log('🌐 Web server running'));
@@ -23,19 +43,20 @@ app.listen(process.env.PORT || 3000, () => console.log('🌐 Web server running'
 async function startBot() {
   const { state, saveCreds } = await useMultiFileAuthState('auth_info');
 
-  const sock = makeWASocket({
+  sock = makeWASocket({
     auth: state,
-    logger: P({ level: 'silent' })
+    logger: P({ level: 'silent' }),
+    printQRInTerminal: false
   });
 
   sock.ev.on('creds.update', saveCreds);
 
   sock.ev.on('connection.update', (update) => {
-    const { connection, lastDisconnect, qr } = update;
-    if (qr) currentQR = qr;
+    const { connection, lastDisconnect } = update;
     if (connection === 'close') {
       const shouldReconnect = lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut;
       botStatus = 'reconnecting...';
+      pairingCode = null;
       if (shouldReconnect) startBot();
     } else if (connection === 'open') {
       botStatus = 'connected';
