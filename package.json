@@ -2,7 +2,7 @@
   "name": "lighter",
   "version": "1.0.0",
   "main": "index.js",
-  "scripts": "powerd by swifttec"
+  "scripts": {
     "start": "node index.js"
   },
   "dependencies": {
