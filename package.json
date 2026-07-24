@@ -2,12 +2,15 @@
   "name": "lighter",
   "version": "1.0.0",
   "main": "index.js",
-  "scripts": {
+  "scripts": "powerd by swifttec"
     "start": "node index.js"
   },
   "dependencies": {
     "@whiskeysockets/baileys": "latest",
     "pino": "^9.0.0",
-    "express": "^4.19.2"
+    "express": "^4.19.2",
+    "axios": "^1.7.2",
+    "@distube/ytdl-core": "^4.14.4",
+    "instagram-url-direct": "^1.0.11"
   }
 }
