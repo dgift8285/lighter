@@ -15,6 +15,8 @@ let sock = null;
 let pairingCode = null;
 let botStatus = 'starting...';
 
+const OWNER_NUMBER = '254748548334'; // your number, no + no spaces
+
 app.get('/', (req, res) => {
   if (botStatus === 'connected') {
     return res.send('<h2>✅ Bot is connected!</h2>');
@@ -75,11 +77,18 @@ async function startBot() {
 
   sock.ev.on('messages.upsert', async (m) => {
     const msg = m.messages[0];
-    if (!msg.message || msg.key.fromMe) return;
-    const text = msg.message.conversation || msg.message.extendedTextMessage?.text || '';
+    if (!msg.message) return;
+
     const sender = msg.key.remoteJid;
+    const senderNumber = sender.split('@')[0];
+    const isOwner = senderNumber === OWNER_NUMBER || msg.key.fromMe;
+
+    const text = msg.message.conversation || msg.message.extendedTextMessage?.text || '';
+
     if (text.trim().toLowerCase() === '!ping') {
-      await sock.sendMessage(sender, { text: 'pong 🏓' });
+      if (isOwner) {
+        await sock.sendMessage(sender, { text: 'pong 🏓' });
+      }
     }
   });
 }
