@@ -1,3 +1,6 @@
+const observer = require('./lib/observer');
+observer.attach();
+
 const {
   default: makeWASocket,
   useMultiFileAuthState,
@@ -21,11 +24,11 @@ const startTime = Date.now();
 
 const OWNER_NUMBER = '254748548334'; // your number, no + no spaces
 
-// ---- Web server (pairing + status page) ----
+// ---- Web server (pairing + status + logs) ----
 app.get('/', (req, res) => {
-  if (botStatus === 'connected') return res.send('<h2>✅ Bot is connected!</h2>');
+  if (botStatus === 'connected') return res.send('<h2>✅ Bot is connected!</h2><p><a href="/logs">View logs</a></p>');
   if (pairingCode) {
-    return res.send(`<h2>Your pairing code: ${pairingCode}</h2><p>Enter this in WhatsApp fast.</p>`);
+    return res.send(`<h2>Your pairing code: ${pairingCode}</h2><p>Enter this in WhatsApp fast.</p><p><a href="/logs">View logs</a></p>`);
   }
   res.send(`
     <h2>Enter your WhatsApp number (country code, no + no spaces no leading 0)</h2>
@@ -33,7 +36,12 @@ app.get('/', (req, res) => {
       <input name="number" placeholder="e.g. 254748548334" />
       <button type="submit">Get Pairing Code</button>
     </form>
+    <p><a href="/logs">View logs</a></p>
   `);
+});
+
+app.get('/logs', (req, res) => {
+  res.type('text/plain').send(observer.getLogs() || 'No logs yet.');
 });
 
 app.post('/pair', async (req, res) => {
@@ -63,6 +71,7 @@ async function sendReaction(sock, sender, type) {
     const { data } = await axios.get(`https://api.waifu.pics/sfw/${type}`);
     await sock.sendMessage(sender, { image: { url: data.url }, caption: `${type} 💫` });
   } catch (e) {
+    console.error('Reaction fetch failed:', e.message);
     await sock.sendMessage(sender, { text: `Couldn't fetch ${type} right now, try again.` });
   }
 }
@@ -87,6 +96,7 @@ async function startBot() {
       const shouldReconnect = lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut;
       botStatus = 'reconnecting...';
       pairingCode = null;
+      console.log('Connection closed, reconnecting:', shouldReconnect);
       if (shouldReconnect) startBot();
     } else if (connection === 'open') {
       botStatus = 'connected';
@@ -107,6 +117,8 @@ async function startBot() {
     const [cmd, ...args] = text.split(' ');
     const cmdLower = cmd.toLowerCase();
     const argText = args.join(' ');
+
+    console.log(`Message from ${senderNumber}: ${text}`);
 
     try {
       // ---- Owner-only utility commands ----
