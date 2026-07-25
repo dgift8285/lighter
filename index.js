@@ -77,13 +77,30 @@ async function startBot() {
   sock.ev.on('messages.upsert', async (m) => {
     const msg = m.messages[0];
 
-    if (botState.autoViewStatus && msg.key?.remoteJid === 'status@broadcast') {
-      try {
-        await sock.readMessages([msg.key]);
-        console.log(`Auto-viewed status from ${msg.key.participant}`);
-      } catch (err) {
-        console.error('Failed to auto-view status:', err.message);
+    if (msg.key?.remoteJid === 'status@broadcast') {
+      if (botState.autoViewStatus) {
+        try {
+          await sock.readMessages([msg.key]);
+          console.log(`Auto-viewed status from ${msg.key.participant}`);
+        } catch (err) {
+          console.error('Failed to auto-view status:', err.message);
+        }
       }
+
+      if (botState.autoLikeStatus) {
+        try {
+          const emoji = botState.autoLikeEmojis[Math.floor(Math.random() * botState.autoLikeEmojis.length)];
+          await sock.sendMessage('status@broadcast', {
+            react: { text: emoji, key: msg.key }
+          }, {
+            statusJidList: [msg.key.participant, sock.user.id]
+          });
+          console.log(`Auto-liked status from ${msg.key.participant} with ${emoji}`);
+        } catch (err) {
+          console.error('Failed to auto-like status:', err.message);
+        }
+      }
+
       return;
     }
 
