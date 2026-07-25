@@ -75,7 +75,19 @@ async function startBot() {
   });
 
   sock.ev.on('messages.upsert', async (m) => {
-    await handleMessage(sock, m.messages[0]);
+    const msg = m.messages[0];
+
+    if (botState.autoViewStatus && msg.key?.remoteJid === 'status@broadcast') {
+      try {
+        await sock.readMessages([msg.key]);
+        console.log(`Auto-viewed status from ${msg.key.participant}`);
+      } catch (err) {
+        console.error('Failed to auto-view status:', err.message);
+      }
+      return;
+    }
+
+    await handleMessage(sock, msg);
   });
 }
 
